@@ -1,3 +1,4 @@
+const expectRevert = require("./helpers/expectRevert");
 const LearnToken = artifacts.require('LearnToken');
 
 contract('LearnToken', accounts => {
@@ -5,6 +6,7 @@ contract('LearnToken', accounts => {
 
   const tokenOwner = accounts[0];
   const notTokenOwner = accounts[1];
+  const mintReciever = accounts[2];
 
   before(async function () {
     token = await LearnToken.new({ from: tokenOwner });
@@ -32,48 +34,45 @@ contract('LearnToken', accounts => {
 
     assert.strictEqual(creatorBalance.toString(), initialSupply.toString());
     assert.strictEqual(totalSupply.toString(), initialSupply.toString());
-
-    // const receipt = await web3.eth.getTransactionReceipt(token.transactionHash);
-    // const logs = decodeLogs(receipt.logs, HaraToken, token.address);
-    // assert.equal(logs.length, 1);
-    // assert.equal(logs[0].event, 'Transfer');
-    // assert.equal(logs[0].args.from.valueOf(), 0x0);
-    // assert.equal(logs[0].args.to.valueOf(), creator.toLowerCase());
-    // assert(logs[0].args.value.eq(totalSupply));
   });
 
-//   it('transfer 10 token to burner', async function () {
-//     await token.transfer(burner, 10, { from: creator });
-//     const userToken = await token.balanceOf(burner);
-//     assert.strictEqual(userToken.toNumber(), 10);
-//   });
+  it('can transfer 10 token from token owner to not owner', async function () {
+    const transferReciept = await token.transfer(notTokenOwner, 10, {from:tokenOwner});
+    var notOwnerBalance = await token.balanceOf(notTokenOwner);
 
-//   it('burn 20 token and mint the same amount for account[0]', async function () {
-//     await token.transfer(burner, 50, { from: creator });
-//     var txHash = await token.burnToken(20, "1this is tes", { from: burner });
-//     const receipt = await web3.eth.getTransactionReceipt(txHash.receipt.transactionHash);
-//     const logs = decodeLogs(receipt.logs, HaraToken, token.address);
-//     const afterBurn = await token.balanceOf(burner);
-//     assert.strictEqual(afterBurn.toNumber(), 30);
-//     await token.mintToken(logs[2].args.id.valueOf(), logs[2].args.burner, 
-//           logs[2].args.value.valueOf(), logs[2].args.hashDetails, 1, { from: creator });
-//     const afterMint = await token.balanceOf(burner);
-//     assert.strictEqual(afterMint.toNumber(), 50);
-//   });
+    assert.strictEqual(notOwnerBalance.toString(), "10");
+  });
 
-//   it('minted by minter instead of creator', async function (){
-//     await token.setMinter(minter, { from: creator });
-//     const allowedMinter = await token.minter();
-//     assert.strictEqual(allowedMinter, minter);
+  describe('contract burnable', async function (){
 
-//     await token.transfer(burner, 50, { from: creator });
-//     var txBurn = await token.burnToken(20, "1this is tes", { from: burner });
-//     const receiptBurn = await web3.eth.getTransactionReceipt(txBurn.receipt.transactionHash);
-//     const logsBurn = decodeLogs(receiptBurn.logs, HaraToken, token.address);
-//     const txMint = await token.mintToken(logsBurn[2].args.id.valueOf(), logsBurn[2].args.burner, 
-//         logsBurn[2].args.value.valueOf(), logsBurn[2].args.hashDetails, 1, { from: minter });
-//     const receiptMint = await web3.eth.getTransactionReceipt(txMint.receipt.transactionHash);
-//     const logsMint = decodeLogs(receiptMint.logs, HaraToken, token.address);
-//     assert.strictEqual(logsMint[2].args.status, true);
-//   });
+    it('burn 10 token', async function () {
+      const userTokenBefore = await token.balanceOf(tokenOwner);
+      const burnReciept = await token.burn(web3.utils.toWei("10"), {from: tokenOwner});
+      const userTokenAfter = await token.balanceOf(tokenOwner);
+      var difference = (userTokenBefore/(10**18)) - (userTokenAfter/(10**18));
+      assert.strictEqual(difference.toString(), "10");
+
+      const burnLogs = burnReciept.logs;
+      assert.strictEqual(burnLogs.length, 2);
+      assert.strictEqual(burnLogs[0].event, "Transfer");
+      assert.strictEqual(burnLogs[1].event, "BurnLog");
+      assert.strictEqual(burnLogs[1].args.by, tokenOwner);
+      assert.strictEqual(burnLogs[1].args.value.toString(), web3.utils.toWei("10").toString());
+    });
+
+    it('can not burn if burner doesn\'t have token', async function () {
+      await expectRevert(token.burn(web3.utils.toWei("10"), {from: notTokenOwner}))
+    });
+  });
+
+  describe('contract mintable', async function (){
+
+    it('mint 10 token by owner', async function () {
+      
+    });
+
+    it('can not mint by not owner', async function () {
+      
+    });
+  });
 });

@@ -10,8 +10,9 @@ module.exports = async promise => {
       //       we distinguish this from an actual out of gas event? (The
       //       testrpc log actually show an 'invalid jump' event.)
       const outOfGas = error.message.search('out of gas') >= 0;
+      const checksumFailed = error.message.search('capitalization checksum test failed') >= 0;
       assert(
-        invalidOpcode || outOfGas,
+        invalidOpcode || outOfGas || checksumFailed,
         "Expected throw, got '" + error + "' instead",
       );
       return;
